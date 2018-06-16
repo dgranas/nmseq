@@ -13,6 +13,7 @@ import os
 import re
 import collections
 import pandas as pd
+import sys # can delete if don't need sys.exit...
 
 def get_cigar_len(newcig):
     '''
@@ -71,7 +72,7 @@ def read_bamfiles_samples(bamfiles_samples):
         bamfiles_samples.append((bamfile.strip(), sample.strip()))
     return bamfiles_samples
 
-def read_two_column_file
+#def read_two_column_file
 
 def bam_to_sam(bamfiles_samples, sam_flag, no_mismatch=True, keep_header=False):
     '''
@@ -241,6 +242,9 @@ def main():
         help='file containing <reference name>, <shortened name> (gi|12044..., 28S)')
     args = parser.parse_args()
 
+    print(args.mismatch)
+    sys.exit()
+
     # default samflag is 131 = read paired, read mapped in proper pair, second in pair
     if not args.samflag:
         args.samflag = 131
@@ -252,7 +256,15 @@ def main():
             if seq[0].upper() in 'ACGT':
                 args.ref[header] = '-' + seq
 
-    bamfiles_samples = read_bamfiles_samples(args.bamfiles_samples)
+    # get a dict for {ref: name} using pandas dataframe
+    if args.refnames:
+        refnames = pd.read_csv(args.refnames, names=['ref', 'name'])
+        ref_to_name = {row.ref:row.name for row in refnames.itertuples()}
+
+    #bamfiles_samples = read_bamfiles_samples(args.bamfiles_samples)
+    bamfiles_samples = pd.read_csv(args.bamfiles_samples, names=['bamfile', 'sample'])
+    bamfile_to_sample = {row.ref:row.name for row in refnames.itertuples()}
+
 
     samples = [sample for bamfile, sample in bamfiles_samples]
 
