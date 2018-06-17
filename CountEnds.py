@@ -14,46 +14,7 @@ import re
 import collections
 import pandas as pd
 import sys # can delete if don't need sys.exit...
-import multiprocessing as mp
-
-'''
-http://www.blopig.com/blog/2016/08/processing-large-files-using-python/
-'''
-
-def process_wrapper(chunkStart, chunkSize):
-    with open("input.txt") as f:
-        f.seek(chunkStart)
-        lines = f.read(chunkSize).splitlines()
-        for line in lines:
-            process(line)
-
-def chunkify(fname,size=1024*1024):
-    fileEnd = os.path.getsize(fname)
-    with open(fname,'r') as f:
-        chunkEnd = f.tell()
-    while True:
-        chunkStart = chunkEnd
-        f.seek(size,1)
-        f.readline()
-        chunkEnd = f.tell()
-        yield chunkStart, chunkEnd - chunkStart
-        if chunkEnd > fileEnd:
-            break
-
-#init objects
-pool = mp.Pool(cores)
-jobs = []
-
-#create jobs
-for chunkStart,chunkSize in chunkify("input.txt"):
-    jobs.append( pool.apply_async(process_wrapper,(chunkStart,chunkSize)) )
-
-#wait for all jobs to finish
-for job in jobs:
-    job.get()
-
-#clean up
-pool.close()
+import pysam
 
 def get_cigar_len(newcig):
     '''
@@ -197,42 +158,21 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
             counts[ref_name][pos] += 1
     return counts
 
-def count_ends_csv(samfile, ref_to_seq, ref_to_shortname):
-    '''
-    Given a sam file, reference sequences, and shortnames
-    Count the 5' ends of reads
-    '''
+def count_ends_pysam(bamfile, ref_to_shortname):
+    bamfile = pysam.AlignmentFile(bamfile, 'rb')
+    reads = bamfile.fetch()
     counts = {}
-
-    # sam files will have 21 columns
-    names = ['header','flag','ref_name','pos','mapq','cigar','rnext','pnext','tlen','seq','qual']
-    names += [str(i) for i in range(10)] # don't care about these columns
-    df = pd.read_csv(samfile, delimiter='\t', names=names, comment='@')
-
-    for r in df.itertuples():
-        if r.flag & 16: # read is reverse strand, so 5' is the right-most position
-            pos = r.pos + get_cigar_len(r.cigar) - 1
-            # -1 since if starts at pos 1 and is 3bp long, it will go to pos 1+3-1 = 3
-            read_base = r.seq[-1]
-        else: # read is forward strand, so 5' is the left-most base
-            read_base = r.seq[0] 
-            pos = r.pos
-
-        ref_name = ref_to_shortname.get(r.ref_name, r.ref_name)
-        if ref_to_seq:
-            # check if the ref_name doesn't match any header in the ref fasta file
-            if ref_name not in ref_to_seq.keys():
-                #raise SystemExit(f'{ref_name} in sam file did not match fasta headers')
-                raise SystemExit('{} in sam file did not match fasta headers'.format(ref_name))
-            # check if the ref base matches what the ref seq says
-            if read_base != ref_to_seq[ref_name][pos]:
-                #raise SystemExit(f'{read_base} does not match \
-                #    {ref_to_seq[ref_name][pos]} at pos {pos} in {ref_name}')
-                raise SystemExit('{} does not match {} at pos {} in {}'.format(
-                    read_base, ref_to_seq[ref_name][pos], pos, ref_name))
-
+    for read in reads:
+        if not read.flag & 131 or read.get_tag('NM') > 0:
+            continue 
+        ref_pos = read.get_reference_positions()
+        if read.flag & 16: 
+            pos = ref_pos[-1]+1
+        else:
+            pos = ref_pos[0]+1
+        ref_name = ref_to_shortname.get(read.reference_name, read.reference_name)
         if ref_name not in counts.keys():
-            counts[ref_name] = collections.defaultdict(int)
+                counts[ref_name] = collections.defaultdict(int)
 
         counts[ref_name][pos] += 1
     return counts
@@ -360,15 +300,16 @@ def main():
     counts = {}
     for bamfile, sample in bamfile_to_sample.items():
         # convert bam file to sam file
-        samfile = bam_to_sam(bamfile, args.samflag, mismatch=args.mismatch, 
-                             keep_header=args.header)
+        #samfile = bam_to_sam(bamfile, args.samflag, mismatch=args.mismatch, 
+        #                     keep_header=args.header)
 
         # do the end counting
-        counts[sample] = count_ends_csv(samfile, args.refseqs, ref_to_shortname)
+        #counts[sample] = count_ends(samfile, args.refseqs, ref_to_shortname)
+        counts[sample] = count_ends_pysam(bamfile, ref_to_shortname)
 
         # remove sam file
-        if not args.keepsam:
-            os.remove(samfile)
+        #if not args.keepsam:
+        #    os.remove(samfile)
 
     # write end counts to file
     write_counts(counts, args.output, bamfiles_samples.samples, args.refseqs,
