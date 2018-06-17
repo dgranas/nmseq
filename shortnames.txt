@@ -1,0 +1,8 @@
+gi|374093199|ref|NR_003280.2|Musmusculus5.8SribosomalRNA(Rs5-8s1)_ribosomalRNA, 5.8S
+gi|262231778|ref|NR_030686.1|Musmusculus5SRNA(Rn5s)_ribosomalRNA, 5S
+gi|374088232|ref|NR_003278.3|Musmusculus18SribosomalRNA(Rn18s)_ribosomalRNA, 18S
+gi|120444900|ref|NR_003279.1|Musmusculus28SribosomalRNA(Rn28s1)_ribosomalRNA, 28S
+gi|374093199|ref|NR_003280.2|, 5.8S
+gi|262231778|ref|NR_030686.1|, 5S
+gi|374088232|ref|NR_003278.3|, 18S
+gi|120444900|ref|NR_003279.1|, 28S
