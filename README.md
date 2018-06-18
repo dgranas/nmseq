@@ -1,39 +1,48 @@
 # Nm-seq
 
-Count ends from an Nm-seq experiment
+Counts 5' ends of R2 reads from an Nm-seq experiment
 
 ## Getting Started
 
 ### Prerequisites
 
-samtools
-pandas
+[samtools](http://www.htslib.org)
 
-### Running the program
+python modules: pandas, argparse
 
-python CountEnds.py [bamfiles_samples] [output]
+### Create a bam_samples csv file
 
-[bamfiles_samples] is a csv text file containing:
-    bam filename 1, sample name 1,
-    bam filename 2, sample name 2, 
-    ...
+Each line contains [bam filename], [sample name]
 
-[output] is the name for the output, for example nm2_rRNA
+This can be created manually or by running CreateBamSample.py
 
-Optional arguments:
+### Running CountEnds.py
 
--r, --ref: fasta file with reference sequences, headers must match bam refs
+python CountEnds.py [experiment_name] [bam_samples file] 
+    -r [reference sequences fasta file]
+    -s [shortnames csv file]
 
--mm, --mismatch: allow mismatches in bam alignments (default is no mismatches)
+#### [experiment_name]
 
--f, --samflag: set the [SAMFLAG](https://broadinstitute.github.io/picard/explain-flags.html)
+name used in output files, for example nm2_rRNA or nm3_chrM
 
-  default is 131 for read paired, read mapped in proper pair, second in pair
+#### [bam_samples file]
 
---header: keep header in sam file (default is no header)
+csv file connecting bam filename to the sample name
 
---keepsam: keep sam files (default is they are deleted)
+#### -r [reference sequences fasta file]
 
---refnames: csv file containing: [reference name], [shortened name]
+fasta file with reference sequences
 
-  for example: gi|12044..., 28S
+headers must match bam refs
+
+you would use this if you are analyzing rRNA alignments for example
+
+#### -s [shortnames csv file]
+
+csv file containing: [reference name], [shortened name]
+
+this is to convert the bam reference names to shorter names if desired
+
+for example 'gi|262231778|ref|NR_030686.1|' could be converted to '5S'
+
