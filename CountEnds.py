@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 '''
-Given a file where each line has <bam filename>, <sample name>
+Requires: samtools
+
+python CountEnds.py [bamfiles_samples] [experiment_name]
+
+[bamfiles_samples]: csv file where each line has <bam filename>, <sample name>
+[experiment_name]: name used in output files, for example nm2_rRNA or nm3_chrM 
+
+optional arguments:
+-r, --ref: fasta file with reference sequences, headers must match bam refs
+--refnames: csv file containing: [reference name], [shortened name]
+
 For each bamfile:
 Convert to sam file with R2 reads with SAM flag 131
 (read paired, read mapped in proper pair, second in pair)
@@ -10,32 +20,8 @@ Counts the 5' positions of the R2 reverse reads
 
 import argparse
 import os
-import re
 import collections
 import pandas as pd
-import sys # can delete if don't need sys.exit...
-import pysam
-
-def get_cigar_len(newcig):
-    '''
-    Given a cigar string
-    Returns the length of the alignment on the reference sequence
-    '''
-    cigar_len = 0
-
-    while(len(newcig) > 0):
-        ref_align = re.match(r'(\d+)[MNDP\=X](.*)', newcig)
-        ref_unalign = re.match(r'(\d+)[SIH](.*)', newcig)
-
-        if ref_align:
-            cigar_len = cigar_len + int(ref_align.group(1))
-            newcig = ref_align.group(2)
-        elif ref_unalign:
-            newcig = ref_unalign.group(2)
-        else:
-            raise SystemExit('Failed to parse CIGAR {}'.format(newcig))
-            newcig = ''
-    return cigar_len
 
 def fasta_to_dict(fasta_file):
     '''
@@ -53,51 +39,21 @@ def fasta_to_dict(fasta_file):
                 header_to_seq[header] += line.upper()
     return header_to_seq
 
-def bam_to_sam_original(bamfiles_samples, sam_flag, no_mismatch=True, keep_header=False):
-    '''
-    Given list of [(bamfile, sample)]
-    Converts each bam file to a sam file 
-    Applies -f sam flag 
-    For example to get only R2 reads you can use -f 131
-    If no_mismatch is True it applies an awk command to select for NM:i:0
-    If keep_header is True is uses -h to keep the header
-    Returns a list of [(sam_file, sample)]
-    '''
-    samfiles_samples = []
-    for bamfile, sample in bamfiles_samples:
-        # change <file>.bam to <file>.sam
-        file_prefix = os.path.join(*os.path.splitext(bamfile)[:-1])
-        samfile = '{}.f{}.sam'.format(file_prefix, sam_flag)
-
-        command = 'samtools view {0} -f {1}'.format(bamfile, sam_flag)
-
-        if keep_header:
-            command += ' -h'
-
-        if no_mismatch:
-            command += " | awk '$0 ~\"NM:i:0\"'"
-
-        command += ' > {}'.format(samfile)
-        os.system(command)
-        samfiles_samples.append((samfile, sample))
-    return samfiles_samples
-
-def bam_to_sam(bamfile, sam_flag, mismatch=False, keep_header=False):
+def bam_to_sam(bamfile, sam_flag=131, mismatch=False, keep_header=False):
     '''
     Given a bam file
     Converts it to a sam file 
     Applies -f sam flag 
     For example to get only R2 reads you can use -f 131
-    If no_mismatch is True it applies an awk command to select for NM:i:0
+    131 = read paired, read mapped in proper pair, second in pair
+    If mismatch is False it applies an awk command to select for NM:i:0
     If keep_header is True is uses -h to keep the header
     Returns the sam file
     '''
     # change <file>.bam to <file>.sam
     file_prefix = os.path.join(*os.path.splitext(bamfile)[:-1])
-    #samfile = f'{file_prefix}.f{sam_flag}.sam'
     samfile = '{}.f{}.sam'.format(file_prefix, sam_flag)
 
-    #command = f'samtools view {bamfile} -f {sam_flag}'
     command = 'samtools view {} -f {}'.format(bamfile, sam_flag)
 
     if keep_header:
@@ -105,11 +61,10 @@ def bam_to_sam(bamfile, sam_flag, mismatch=False, keep_header=False):
     if not mismatch:
         command += " | awk '$0 ~\"NM:i:0\"'"
 
-    #command += f' > {samfile}'
     command += ' > {}'.format(samfile)
 
     os.system(command)
-    return samfile    
+    return samfile   
 
 def count_ends(samfile, ref_to_seq, ref_to_shortname):
     '''
@@ -122,9 +77,6 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
         for line in FH:
             line = line.rstrip()
 
-            if line.startswith('@'):
-                continue
-
             l = line.split()
             flag = int(l[1])
             ref_name = l[2]
@@ -132,8 +84,11 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
             cigar = l[5]
             seq = l[9]
 
+            # assuming no mismatches allowed, all cigars should be [int]M
+            ref_length = int(cigar[:-1])
+
             if flag & 16: # read is reverse strand, so 5' is the right-most position
-                pos = pos + get_cigar_len(cigar) - 1
+                pos = pos + ref_length - 1
                 # -1 since if starts at pos 1 and is 3bp long, it will go to pos 1+3-1 = 3
                 read_base = seq[-1]
             else: # read is forward strand, so 5' is the left-most base
@@ -143,38 +98,12 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
             if ref_to_seq:
                 # check if the ref_name doesn't match any header in the ref fasta file
                 if ref_name not in ref_to_seq.keys():
-                    #raise SystemExit(f'{ref_name} in sam file did not match fasta headers')
                     raise SystemExit('{} in sam file did not match fasta headers'.format(ref_name))
-                # check if the ref base matches what the ref seq says
-                if read_base != ref_to_seq[ref_name][pos]:
-                    #raise SystemExit(f'{read_base} does not match \
-                    #    {ref_to_seq[ref_name][pos]} at pos {pos} in {ref_name}')
-                    raise SystemExit('{} does not match {} at pos {} in {}'.format(
-                        read_base, ref_to_seq[ref_name][pos], pos, ref_name))
 
             if ref_name not in counts.keys():
                 counts[ref_name] = collections.defaultdict(int)
 
             counts[ref_name][pos] += 1
-    return counts
-
-def count_ends_pysam(bamfile, ref_to_shortname):
-    bamfile = pysam.AlignmentFile(bamfile, 'rb')
-    reads = bamfile.fetch()
-    counts = {}
-    for read in reads:
-        if not read.flag & 131 or read.get_tag('NM') > 0:
-            continue 
-        ref_pos = read.get_reference_positions()
-        if read.flag & 16: 
-            pos = ref_pos[-1]+1
-        else:
-            pos = ref_pos[0]+1
-        ref_name = ref_to_shortname.get(read.reference_name, read.reference_name)
-        if ref_name not in counts.keys():
-                counts[ref_name] = collections.defaultdict(int)
-
-        counts[ref_name][pos] += 1
     return counts
 
 def generate_rows(seen_pos, ref_range=None):
@@ -248,35 +177,18 @@ def write_counts(counts, output, samples, ref_to_seq, ref_to_shortname):
                 file_opened = True
 
 def main():
-    #if sys.version_info[0] < 3 and sys.version_info[1] < 6:
-
-
     parser = argparse.ArgumentParser(
         description= 'Count ends from bam alignments, requires samtools')
     parser.add_argument('bamfiles_samples', type=str, 
         help='file where each line: bam filename, sample name')
-    parser.add_argument('output', type=str,
-        help='output name (for example nm2_rRNA, or nm3_chrM)')
+    parser.add_argument('experiment_name', type=str,
+        help='experiment name (for example nm2_rRNA, or nm3_chrM)')
     parser.add_argument('-r', '--refseqs', type=str, 
         help='reference sequences in fasta format with headers that match bam references', 
         metavar='reference.fasta')
-    parser.add_argument('-mm', '--mismatch',
-        help='allow mismatches in bam alignments (default is no mismatches)',
-        action='store_true')
-    parser.add_argument('-f', '--samflag', type=int,
-        default=131, 
-        help='sam -f SAMFLAG (default is 131 for R2 reads)')
-    parser.add_argument('--header',
-        help='keep header in sam file (default is no header)',
-        action='store_true')
-    parser.add_argument('--keepsam',
-        help='keep sam files (default is they are deleted)',
-        action='store_true')
     parser.add_argument('-s', '--shortnames', type=str,
         help='file containing <reference name>, <shortened name> (gi|12044..., 28S)')
     args = parser.parse_args()
-
-    # default samflag is 131 = read paired, read mapped in proper pair, second in pair
 
     # if reference sequences provided, read them in and store as a dict {header: seq}
     if args.refseqs:
@@ -299,20 +211,19 @@ def main():
 
     counts = {}
     for bamfile, sample in bamfile_to_sample.items():
+
         # convert bam file to sam file
-        #samfile = bam_to_sam(bamfile, args.samflag, mismatch=args.mismatch, 
-        #                     keep_header=args.header)
+        samfile = bam_to_sam(bamfile)
 
         # do the end counting
-        #counts[sample] = count_ends(samfile, args.refseqs, ref_to_shortname)
-        counts[sample] = count_ends_pysam(bamfile, ref_to_shortname)
+        counts[sample] = count_ends(samfile, args.refseqs, ref_to_shortname)
 
         # remove sam file
-        #if not args.keepsam:
-        #    os.remove(samfile)
+        if os.path.exists(samfile):
+            os.remove(samfile)
 
     # write end counts to file
-    write_counts(counts, args.output, bamfiles_samples.samples, args.refseqs,
+    write_counts(counts, args.experiment_name, bamfiles_samples.samples, args.refseqs,
                  ref_to_shortname)
 
 if __name__ == '__main__':

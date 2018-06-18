@@ -6,14 +6,17 @@ Count ends from an Nm-seq experiment
 
 ### Prerequisites
 
-samtools needs to be installed
+samtools
+pandas
 
 ### Running the program
 
-python count_ends.py [bamfiles_samples] [output]
+python CountEnds.py [bamfiles_samples] [output]
 
 [bamfiles_samples] is a csv text file containing:
-bam filename, sample name
+    bam filename 1, sample name 1,
+    bam filename 2, sample name 2, 
+    ...
 
 [output] is the name for the output, for example nm2_rRNA
 
