@@ -30,10 +30,10 @@ The csv file bam_samples.txt is created where each line has
 
 This can then be used as input for CountEnds.py
 '''
-
+from builtins import input # to make py2 and py3 input compatible
 import os
 import argparse
-from builtins import input # to make py2 and py3 input compatible
+
 
 def find_bam_files(bam_dir = '.'):
     '''
