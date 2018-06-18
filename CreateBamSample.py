@@ -33,6 +33,7 @@ This can then be used as input for CountEnds.py
 
 import os
 import argparse
+from builtins import input # to make py2 and py3 input compatible
 
 def find_bam_files(bam_dir = '.'):
     '''
@@ -55,20 +56,20 @@ def find_bam_files(bam_dir = '.'):
             if not parse_asked:
                 parse_asked = True
 
-                delim = raw_input('If you want to name the sample by breaking up the filename using a delimiter,\nenter the delimiter to use (or press Enter to skip this): ')
+                delim = input('If you want to name the sample by breaking up the filename using a delimiter,\nenter the delimiter to use (or press Enter to skip this): ')
                 if delim:
                     print('Enter the fields you want to include as comma-separated numbers, starting with 1')
                     print('For example, enter 2,3,4 to get WT_BSA_input from NmSeq_WT_BSA_input_filtered.bam')
                     
                     fields = []
                     while not fields:
-                        fields = [int(i) for i in raw_input('Enter fields to use: ').split(',')]
+                        fields = [int(i) for i in input('Enter fields to use: ').split(',')]
                     parse_flag = True
 
             if parse_flag:
                 sample = '_'.join([filename.split(delim)[i-1] for i in fields])
             else:
-                sample = raw_input('Enter sample name (or press Enter to exclude): ')
+                sample = input('Enter sample name (or press Enter to exclude): ')
             if sample:
                 bam_samples.append((os.path.join(bam_dir, filename), sample))
 
@@ -86,7 +87,7 @@ def write_bam_samples(bam_samples):
     print('Samples: ')
     for i, bam_sample in enumerate(bam_samples):
         print('{}\t{}'.format(i+1, bam_sample[1]))
-    order = raw_input('Desired order (or press Enter to keep this order): ')
+    order = input('Desired order (or press Enter to keep this order): ')
     if order:
         bam_samples = [bam_samples[int(i)-1] for i in order.split(',')]
         print('Samples reordered:')
