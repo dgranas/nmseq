@@ -1,0 +1,8 @@
+sampled_bam_files/NmSeq2_WT_BSA_OED_filtered.sampled.bam, WT_BSA_OED
+sampled_bam_files/NmSeq2_WT_BSA_input_filtered.sampled.bam, WT_BSA_input
+sampled_bam_files/NmSeq2_WT_Palm_OED_filtered.sampled.bam, WT_Palm_OED
+sampled_bam_files/NmSeq2_WT_Palm_input_filtered.sampled.bam, WT_Palm_input
+sampled_bam_files/NmSeq2_KO_BSA_OED_filtered.sampled.bam, KO_BSA_OED
+sampled_bam_files/NmSeq2_KO_BSA_input_filtered.sampled.bam, KO_BSA_input
+sampled_bam_files/NmSeq2_KO_Palm_OED_filtered.sampled.bam, KO_Palm_OED
+sampled_bam_files/NmSeq2_KO_Palm_input_filtered.sampled.bam, KO_Palm_input

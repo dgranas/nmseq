@@ -1,9 +1,34 @@
 #!/usr/bin/python
 
 '''
-Generates a bam_samples.txt file
-Optional argument is to supply the folder with the bam files
-Default is to look in current directory
+Generates a bam_samples.txt file in current directory
+
+Requires: 
+argparse
+
+Usage:
+python CreateBamSample.py -d [bam_directory]
+
+Optional arguments:
+-d [bam_directory]: directory containing bam files
+default is to look in the current directory
+
+Each bam file is given a sample name
+Sample names can be given in 2 ways
+
+1. Break up the bam filenames with a delimiter
+
+    User enters the delimiter and the fields they want to keep
+    NmSeq2_WT_BSA_input_filtered.bam with a delimiter of '_' and fields 2,3,4
+    gives a sample name of WT_BSA_input
+    This will be applied to all bam files
+
+2. User names each bam file individually
+
+The csv file bam_samples.txt is created where each line has
+[bam filename], [sample name]
+
+This can then be used as input for CountEnds.py
 '''
 
 import os
@@ -17,8 +42,8 @@ def find_bam_files(bam_dir = '.'):
     Or by having the user enter the name for each file
     Returns list of tuples [(bamfile, sample)]
     '''
-    # make sure there isn't already a bam_sample file in this directory
-    if os.path.exists(os.path.join(bam_dir, 'bam_sample.txt')):
+    # make sure there isn't already a bam_sample file in current directory
+    if os.path.exists('bam_sample.txt'):
         raise SystemExit('There is already a bam_sample.txt file in the directory')
     bam_samples = []
     parse_asked = False # once we ask about parsing, set to True so don't ask again
@@ -30,14 +55,10 @@ def find_bam_files(bam_dir = '.'):
             if not parse_asked:
                 parse_asked = True
 
-                delim = raw_input('If you want to name the sample by breaking up \
-                    the filename using a delimiter,\n enter the delimiter to use \
-                    (or press Enter to skip this): ')
+                delim = raw_input('If you want to name the sample by breaking up the filename using a delimiter,\nenter the delimiter to use (or press Enter to skip this): ')
                 if delim:
-                    print('Enter the fields you want to include as comma-separated \
-                        numbers, starting with 1')
-                    print('For example, enter 2,3,4 to get WT_BSA_input from \
-                        NmSeq_WT_BSA_input_filtered.bam')
+                    print('Enter the fields you want to include as comma-separated numbers, starting with 1')
+                    print('For example, enter 2,3,4 to get WT_BSA_input from NmSeq_WT_BSA_input_filtered.bam')
                     
                     fields = []
                     while not fields:
@@ -69,16 +90,15 @@ def write_bam_samples(bam_samples):
     if order:
         bam_samples = [bam_samples[int(i)-1] for i in order.split(',')]
         print('Samples reordered:')
-        for i, bam_sample in enumerate(samples):
+        for i, bam_sample in enumerate(bam_samples):
             print('{}\t{}'.format(i+1, bam_sample[1]))
 
     # write out the new bam_sample.txt file
     with open('bam_sample.txt', 'w') as f:
         for bamfile, sample in bam_samples:
             f.write('{}, {}\n'.format(bamfile, sample))
-            break
 
-    print('The file bam_sample.txt was created')
+    print('The file bam_sample.txt was created in current directory')
 
 def main():
     parser = argparse.ArgumentParser(
@@ -92,12 +112,11 @@ def main():
 
     bam_samples = find_bam_files(args.directory)
 
-    # if nothing found, ask user for the directory path
+    # case were no bam files were found
     if not bam_samples:
-        raise SystemExit('No bam files found in directory {}'.format(bam_dir))
+        raise SystemExit('No bam files found in directory {}'.format(args.directory))
 
     write_bam_samples(bam_samples)
 
 if __name__ == '__main__':
     main()
-    
