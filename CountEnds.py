@@ -22,6 +22,7 @@ import argparse
 import os
 import collections
 import pandas as pd
+import glob
 
 def fasta_to_dict(fasta_file):
     '''
@@ -72,9 +73,10 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
     Count the 5' ends of reads
     '''
     counts = {}
-
+    total_reads = 0
     with open(samfile) as FH:
         for line in FH:
+            total_reads += 1
             line = line.rstrip()
 
             l = line.split()
@@ -104,6 +106,7 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
                 counts[ref_name] = collections.defaultdict(int)
 
             counts[ref_name][pos] += 1
+    print('total reads = {}'.format(total_reads))
     return counts
 
 def generate_rows(seen_pos, ref_range=None):
@@ -176,20 +179,96 @@ def write_counts(counts, output, samples, ref_to_seq, ref_to_shortname):
             if not ref_to_seq:
                 file_opened = True
 
-def main():
-    parser = argparse.ArgumentParser(
-        description= 'Count ends from bam alignments, requires samtools')
-    parser.add_argument('bamfiles_samples', type=str, 
-        help='file where each line: bam filename, sample name')
-    parser.add_argument('experiment_name', type=str,
-        help='experiment name (for example nm2_rRNA, or nm3_chrM)')
-    parser.add_argument('-r', '--refseqs', type=str, 
-        help='reference sequences in fasta format with headers that match bam references', 
-        metavar='reference.fasta')
-    parser.add_argument('-s', '--shortnames', type=str,
-        help='file containing <reference name>, <shortened name> (gi|12044..., 28S)')
-    args = parser.parse_args()
+def find_bam_files(bam_dir = '.'):
+    # make sure there isn't already a bam_sample file in this directory
+    if os.path.exists(os.path.join(bam_dir, 'bam_sample.txt')):
+        raise SystemExit('There is already a bam_sample.txt file in the directory')
+    samples = []
+    bamfile_to_sample = {}
+    parse_asked = False
+    parse_flag = False
+    for filename in os.listdir(bam_dir):
+        if filename.endswith('.bam'):
+            print(filename)
+            if not parse_asked:
+                parse_asked = True
+                delim = raw_input('If you want to name the sample by parsing the filename using a delimiter,\n enter the delimiter to use (or press Enter to skip this): ')
+                if delim:
+                    print('Enter the fields you want to include as comma-separated numbers, starting with 1')
+                    print('For example, enter 2,3,4 to get WT_BSA_input from NmSeq_WT_BSA_input_filtered.bam')
+                    fields = []
+                    while not fields:
+                        fields = [int(i) for i in raw_input('Enter fields to use: ').split(',')]
+                    parse_flag = True
 
+            if parse_flag:
+                sample = '_'.join([filename.split(delim)[i-1] for i in fields])
+            else:
+                sample = raw_input('Enter sample name (or press Enter to exclude): ')
+            if sample:
+                samples.append(sample)
+                bamfile_to_sample[os.path.join(bam_dir, filename)] = sample
+    return samples, bamfile_to_sample
+
+def get_bam_samples():
+    '''
+    Since no file was passed in as an argument
+    We will get the bam files and their sample names from user input
+    Also will write to a file bam_sample.txt for future use
+    Returns samples and bamfile_to_sample
+    '''
+    # first look in current directory
+    bam_dir = '.'
+    samples = []
+    while not samples:
+        samples, bamfile_to_sample = find_bam_files(bam_dir)
+
+        # if nothing found, ask user for the directory path
+        if not samples:
+            bam_dir = raw_input('Enter directory name containing bam files \
+                (or press Enter to quit): ')
+            if not bam_dir:
+                raise SystemExit('user has aborted program')
+
+    samples.sort()
+
+    print('\nEnter the desired order for the samples using comma-separated positions')
+    print('For example entering 3,4,1,2 for samples A,B,C,D would get the order C,D,A,B')
+    print('Samples: ')
+    for i, sample in enumerate(samples):
+        print('{}\t{}'.format(i+1, sample))
+    order = raw_input('Desired order (or press Enter to keep this order): ')
+    if order:
+        samples = [samples[int(i)-1] for i in order.split(',')]
+        print('Samples reordered:')
+        for i, sample in enumerate(samples):
+            print('{}\t{}'.format(i+1, sample))
+    # write out the new bam_sample.txt file
+    with open('bam_sample.txt', 'w') as f:
+        for sample in samples:
+            for bamfile, samplename in bamfile_to_sample.items():
+                if sample == samplename:
+                    f.write('{}, {}\n'.format(bamfile, sample))
+                    break
+
+    return samples, bamfile_to_sample
+
+def process_input(args):
+    '''
+    '''
+    # get experiment name if not supplied
+    while not args.experiment_name:
+        args.experiment_name = raw_input('Enter the experiment name, for example nm2_rRNA: ')
+
+    # make sure the counts files don't already exist so we don't overwrite them
+    for filename in os.listdir('.'):
+        if filename.startswith(args.experiment_name) and filename.endswith('.counts'):
+            raise SystemExit('counts files already exist for {}'.format(args.experiment_name))
+
+    # if no bam_sample file was provided, generate it through user input
+    if not args.bam_sample:
+        samples, bamfile_to_sample = get_bam_samples()
+        
     # if reference sequences provided, read them in and store as a dict {header: seq}
     if args.refseqs:
         args.refseqs = fasta_to_dict(args.refseqs)
@@ -204,10 +283,28 @@ def main():
         shortnames = pd.read_csv(args.shortnames, names=['ref', 'shortname'], skipinitialspace=True)
         ref_to_shortname = dict(zip(shortnames.ref, shortnames.shortname))
 
-    # read in bamfiles and create dict of {bamfile: sample}
-    bamfiles_samples = pd.read_csv(args.bamfiles_samples, names=['bamfile', 'samples'],
-        skipinitialspace=True)
-    bamfile_to_sample = dict(zip(bamfiles_samples.bamfile, bamfiles_samples.samples))
+    if args.bam_sample:
+        # read in bamfiles and create dict of {bamfile: sample}
+        bamfiles_samples = pd.read_csv(args.bam_sample, names=['bamfile', 'samples'],
+            skipinitialspace=True)
+        bamfile_to_sample = dict(zip(bamfiles_samples.bamfile, bamfiles_samples.samples))
+        samples = bamfiles_samples.samples
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description= 'Count ends from bam alignments, requires samtools')
+    parser.add_argument('-e', '--experiment_name', type=str,
+        help='experiment name (for example nm2_rRNA, or nm3_chrM)')
+    parser.add_argument('-b', '--bam_sample', type=str, 
+        help='csv file where each line: bam filename, sample name')
+    parser.add_argument('-r', '--refseqs', type=str, 
+        help='reference sequences in fasta format with headers that match bam references', 
+        metavar='reference.fasta')
+    parser.add_argument('-s', '--shortnames', type=str,
+        help='file containing <reference name>, <shortened name> (gi|12044..., 28S)')
+    args = parser.parse_args()
+
 
     counts = {}
     for bamfile, sample in bamfile_to_sample.items():
@@ -223,8 +320,7 @@ def main():
             os.remove(samfile)
 
     # write end counts to file
-    write_counts(counts, args.experiment_name, bamfiles_samples.samples, args.refseqs,
-                 ref_to_shortname)
+    write_counts(counts, args.experiment_name, samples, args.refseqs, ref_to_shortname)
 
 if __name__ == '__main__':
     main()
