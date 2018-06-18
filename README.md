@@ -18,24 +18,17 @@ This can be created manually or by running CreateBamSample.py
 
 ### Running CountEnds.py
 
-python CountEnds.py [experiment_name] [bam_samples file] 
-    -r [reference sequences fasta file]
-    -s [shortnames csv file]
+python CountEnds.py [experiment_name] [bam_samples file]
+-r [reference sequences fasta file]
+-s [shortnames csv file]
 
-#### [experiment_name]
+[experiment_name] : name used in output files, for example nm2_rRNA or nm3_chrM
 
-name used in output files, for example nm2_rRNA or nm3_chrM
+[bam_samples file] : csv file connecting bam filename to the sample name
 
-#### [bam_samples file]
-
-csv file connecting bam filename to the sample name
-
-#### -r [reference sequences fasta file]
-
-fasta file with reference sequences
-
-headers must match bam refs
-
+-r [reference sequences fasta file] :  
+fasta file with reference sequences  
+headers must match bam refs  
 you would use this if you are analyzing rRNA alignments for example
 
 #### -s [shortnames csv file]
