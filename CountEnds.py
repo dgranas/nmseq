@@ -86,10 +86,8 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname, sample):
     Count the 5' ends of reads
     '''
     counts = {}
-    total_reads = 0
     with open(samfile) as FH:
         for line in FH:
-            total_reads += 1
             line = line.rstrip()
 
             l = line.split()
@@ -120,6 +118,9 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname, sample):
                 counts[ref_name] = collections.defaultdict(int)
 
             counts[ref_name][pos] += 1
+    total_reads = 0
+    for pos_dict in counts.values():
+        total_reads +=  sum(pos_dict.values())
     print('{}\t\t{}'.format(total_reads, sample))
     return counts
 
