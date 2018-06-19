@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 '''
 Counts 5' ends of R2 reads from an Nm-seq experiment
 

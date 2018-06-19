@@ -3,9 +3,6 @@
 '''
 Generates a bam_samples.txt file in current directory
 
-Requires: 
-argparse
-
 Usage:
 python CreateBamSample.py -d [bam_directory]
 
@@ -33,7 +30,6 @@ This can then be used as input for CountEnds.py
 from builtins import input # to make py2 and py3 input compatible
 import os
 import argparse
-
 
 def find_bam_files(bam_dir = '.'):
     '''
