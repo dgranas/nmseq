@@ -18,10 +18,11 @@ If it works this should generate 4 .counts files
 
 #### Create a bam_samples csv file  
 Each line contains [bam filename], [sample name]  
-This can be created manually or by running CreateBamSample.py
+The line order of the bam files determines the column order in the counts file    
+This can be created manually or by running createBamSample.py
 
-#### Running CountEnds.py  
-python CountEnds.py [experiment_name] [bam_samples file] 
+#### Running countEnds.py  
+python countEnds.py [experiment_name] [bam_samples file] 
 -r [reference sequences fasta file] 
 -s [shortnames csv file]
 

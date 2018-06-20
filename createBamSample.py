@@ -44,13 +44,13 @@ def find_bam_files(bam_dir):
         raise SystemExit('There is already a bam_sample.txt file in the directory')
 
     bam_samples = []
-    parse_flag = 0 # set to 1 if we are using a delimiter, otherwise gets set to 2
+    parse_flag = None # will be set to either 'user_supplied' or 'delim'
 
     for filename in os.listdir(bam_dir):
         if filename.endswith('.bam'):
             print('bam file: {}'.format(filename))
             if not parse_flag:
-                parse_flag = 1
+                parse_flag = 'user_supplied'
 
                 print('If you want to name the sample by breaking up the filename ' 
                       'using a delimiter,\nenter the delimiter to use (or press '
@@ -58,7 +58,7 @@ def find_bam_files(bam_dir):
 
                 delim = input('Delimiter: ')
                 if delim:
-                    parse_flag = 2
+                    parse_flag = 'delim'
                     print('Enter the fields you want to include as comma-separated '
                           'numbers, starting with 1')
                     print('For example, enter 2,3,4 to get WT_BSA_input from '
@@ -68,11 +68,12 @@ def find_bam_files(bam_dir):
                     while not fields:
                         fields = [int(i) for i in input('Enter fields to use: ').split(',')]
 
-            if parse_flag == 2:
+            if parse_flag == 'delim':
                 sample = '_'.join([filename.split(delim)[i-1] for i in fields])
             else:
                 sample = input('Enter sample name (or press Enter to exclude): ')
             if sample:
+                # add the directory path to the filename
                 bam_samples.append((os.path.join(bam_dir, filename), sample))
 
     return bam_samples
@@ -80,7 +81,7 @@ def find_bam_files(bam_dir):
 def write_bam_samples(bam_samples):
     '''
     Get the bam files and their sample names from user input
-    Writes the file bam_sample.txt
+    Write the file bam_sample.txt
     '''
     bam_samples = sorted(bam_samples) # sort by filename
 

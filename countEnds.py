@@ -109,11 +109,43 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname, sample):
 
             # convert to the shortname if possible
             ref_name = ref_to_shortname.get(ref_name, ref_name)
-            if ref_to_seq:
-                # check if the ref_name doesn't match any header in the ref fasta file
-                if ref_name not in ref_to_seq.keys():
-                    raise SystemExit('{} in sam file did not match fasta headers'.format(ref_name))
+            # if ref_to_seq:
+            #     # check if the ref_name doesn't match any header in the ref fasta file
+            #     if ref_name not in ref_to_seq.keys():
+            #         raise SystemExit('{} in sam file did not match fasta headers'.format(ref_name))
 
+            if ref_name not in counts.keys():
+                counts[ref_name] = collections.defaultdict(int)
+
+            counts[ref_name][pos] += 1
+    total_reads = 0
+    for pos_dict in counts.values():
+        total_reads +=  sum(pos_dict.values())
+    print('{}\t\t{}'.format(total_reads, sample))
+    return counts
+
+def count_ends_pysam(bamfile, ref_to_shortname, sample):
+    '''
+    Given bamfile and shortnames
+    Uses pysam to count the 5' end of R2 reads with zero mismatches
+    '''
+    import pysam
+
+    bamfile = pysam.AlignmentFile(bamfile, 'rb')
+    reads = bamfile.fetch() # get all reads
+    counts = {}
+
+    for read in reads:
+        # select for paired, mapped in proper pair, and second in pair
+        # also select for no mismatches
+        if read.flag & 1 and read.flag & 2 and read.flag & 128 and read.get_tag('NM') == 0:
+            ref_pos = read.get_reference_positions()
+            if read.flag & 16: # read is reverse strand, so 5' is the right-most position
+                pos = ref_pos[-1]+1 # since pysam is 0-based and sam files are 1-based
+            else: # read is forward strand, so 5' is the left-most base
+                pos = ref_pos[0]+1
+            # try to get the shortname is possible
+            ref_name = ref_to_shortname.get(read.reference_name, read.reference_name)
             if ref_name not in counts.keys():
                 counts[ref_name] = collections.defaultdict(int)
 
@@ -239,6 +271,8 @@ def main():
         metavar='reference.fasta')
     parser.add_argument('-s', '--shortnames', type=str,
         help='file containing <reference name>, <shortened name> (gi|12044..., 28S)')
+    parser.add_argument('-p', '--pysam', action='store_true',
+        help='use -p if pysam module is installed')
     args = parser.parse_args()
 
     ref_to_seq, ref_to_shortname, bam_sample = process_input(args)
@@ -249,16 +283,20 @@ def main():
 
     for row in bam_sample.itertuples():
 
-        # convert bam file to sam file
-        samfile = bam_to_sam(row.bamfile)
+        if args.pysam:
+            counts[row.samples] = count_ends_pysam(row.bamfile, ref_to_shortname,
+                                                   row.samples)
+        else:
+            # convert bam file to sam file
+            samfile = bam_to_sam(row.bamfile)
 
-        # do the end counting
-        counts[row.samples] = count_ends(samfile, ref_to_seq, ref_to_shortname,
-                                         row.samples)
+            # do the end counting
+            counts[row.samples] = count_ends(samfile, ref_to_seq, ref_to_shortname,
+                                             row.samples)
 
-        # remove sam file
-        if os.path.exists(samfile):
-            os.remove(samfile)
+            # remove sam file
+            if os.path.exists(samfile):
+                os.remove(samfile)
 
     # write end counts to file
     write_counts(counts, args.experiment_name, bam_sample.samples, 
