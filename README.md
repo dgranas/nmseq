@@ -22,9 +22,9 @@ The line order of the bam files determines the column order in the counts file
 This can be created manually or by running createBamSample.py
 
 #### Running countEnds.py  
-python countEnds.py [experiment_name] [bam_samples file] 
--r [reference sequences fasta] 
--s [shortnames csv file]  
+python countEnds.py [experiment_name] [bam_samples file]
+-r [reference sequences fasta]
+-s [shortnames csv file]
 -p
 
 * [experiment_name]  
