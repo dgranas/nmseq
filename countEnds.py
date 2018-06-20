@@ -3,7 +3,7 @@
 Counts 5' ends of R2 reads from an Nm-seq experiment
 
 Requires: 
-samtools, argparse, pandas
+samtools, pandas, (pysam is optional requirement)
 
 Usage:
 python CountEnds.py [bam_sample file] [experiment_name] 
@@ -25,12 +25,14 @@ you would use this if you are analyzing rRNA alignments for example
 this is to convert the bam reference names to shorter names if desired
 for example 'gi|262231778|ref|NR_030686.1|' could be converted to '5S'
 
+-p: Uses pysam module instead of converting bam->sam, slightly faster method
+
 For each bamfile:
-Convert to sam file with R2 reads with SAM flag 131
+Select for R2 reads using sam flag 131
 (read paired, read mapped in proper pair, second in pair)
-Select only perfectly matched alignments using the NM field
-Counts the 5' positions of the R2 reads
-Writes counts out to .counts files
+Select only perfectly matched alignments NM:i:0
+Count the 5' positions of the R2 reads
+Write counts out to .counts files
 '''
 
 import argparse

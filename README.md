@@ -6,7 +6,7 @@ Counts 5' ends of R2 reads from an Nm-seq experiment
 
 ### Prerequisites  
 [samtools](http://www.htslib.org)  
-python modules: pandas
+python modules: pandas, (pysam is optional)
 
 ### Running on example data  
 Click on 'Clone or Download' and select 'Download ZIP'  
@@ -24,21 +24,24 @@ This can be created manually or by running createBamSample.py
 #### Running countEnds.py  
 python countEnds.py [experiment_name] [bam_samples file] 
 -r [reference sequences fasta file] 
--s [shortnames csv file]
+-s [shortnames csv file]  
+-p
 
-[experiment_name]  
+######[experiment_name]  
 name used in output files, for example nm2_rRNA or nm3_chrM
 
-[bam_samples file]  
+######[bam_samples file]  
 csv file connecting bam filename to the sample name
 
--r [reference sequences fasta file]  
+######-r [reference sequences fasta file]  
 fasta file with reference sequences  
 headers must match bam refs  
 you would use this if you are analyzing rRNA alignments for example
 
--s [shortnames csv file]  
+######-s [shortnames csv file]  
 csv file containing: [reference name], [shortened name]  
 this is to convert the bam reference names to shorter names if desired  
 for example 'gi|262231778|ref|NR_030686.1|' could be converted to '5S'
 
+######-p
+uses pysam module to directly read bam file instead of converting to sam
