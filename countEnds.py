@@ -82,7 +82,7 @@ def bam_to_sam(bamfile, sam_flag=131, mismatch=False, keep_header=False):
     os.system(command)
     return samfile   
 
-def count_ends(samfile, ref_to_seq, ref_to_shortname, sample):
+def count_ends(samfile, ref_to_seq, ref_to_shortname):
     '''
     Given a sam file, reference sequences, and shortnames
     Count the 5' ends of reads
@@ -120,13 +120,9 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname, sample):
                 counts[ref_name] = collections.defaultdict(int)
 
             counts[ref_name][pos] += 1
-    total_reads = 0
-    for pos_dict in counts.values():
-        total_reads +=  sum(pos_dict.values())
-    print('{}\t\t{}'.format(total_reads, sample))
     return counts
 
-def count_ends_pysam(bamfile, ref_to_shortname, sample):
+def count_ends_pysam(bamfile, ref_to_shortname):
     '''
     Given bamfile and shortnames
     Uses pysam to count the 5' end of R2 reads with zero mismatches
@@ -152,11 +148,24 @@ def count_ends_pysam(bamfile, ref_to_shortname, sample):
                 counts[ref_name] = collections.defaultdict(int)
 
             counts[ref_name][pos] += 1
+    return counts
+
+def summarize_counts(counts, ref_to_seq, sample):
+    '''
+    Given a counts dict for a particular sample
+    Check that all the ref_names match the reference seq fasta headers (if provided)
+    Also print total reads that were counted
+    '''
+    if ref_to_seq:
+        for ref_name in counts.keys():
+            if ref_name not in ref_to_seq.keys():
+                raise SystemExit('{} in sam file did not match reference sequence '
+                    'fasta headers'.format(ref_name))
+
     total_reads = 0
     for pos_dict in counts.values():
         total_reads +=  sum(pos_dict.values())
     print('{}\t\t{}'.format(total_reads, sample))
-    return counts
 
 def generate_rows(seen_pos, ref_range=None):
     '''
@@ -286,19 +295,19 @@ def main():
     for row in bam_sample.itertuples():
 
         if args.pysam:
-            counts[row.samples] = count_ends_pysam(row.bamfile, ref_to_shortname,
-                                                   row.samples)
+            counts[row.samples] = count_ends_pysam(row.bamfile, ref_to_shortname)
         else:
             # convert bam file to sam file
             samfile = bam_to_sam(row.bamfile)
 
             # do the end counting
-            counts[row.samples] = count_ends(samfile, ref_to_seq, ref_to_shortname,
-                                             row.samples)
+            counts[row.samples] = count_ends(samfile, ref_to_seq, ref_to_shortname)
 
             # remove sam file
             if os.path.exists(samfile):
                 os.remove(samfile)
+
+        summarize_counts(counts[row.samples], ref_to_seq, row.samples)
 
     # write end counts to file
     write_counts(counts, args.experiment_name, bam_sample.samples, 
