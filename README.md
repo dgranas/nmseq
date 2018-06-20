@@ -10,8 +10,10 @@ python modules: pandas, (pysam is optional)
 
 ### Running on example data  
 Click on 'Clone or Download' and select 'Download ZIP'  
-In a terminal navigate to this directory `nmseq-master`  
+In a terminal navigate to this directory `nmseq-master` and run:  
 ```python CountEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt```  
+Alternatively if the python pysam module is installed run:  
+```python CountEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt -p```  
 If it works this should generate 4 .counts files 
 
 ### Running on new data  

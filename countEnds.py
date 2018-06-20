@@ -111,10 +111,6 @@ def count_ends(samfile, ref_to_seq, ref_to_shortname):
 
             # convert to the shortname if possible
             ref_name = ref_to_shortname.get(ref_name, ref_name)
-            # if ref_to_seq:
-            #     # check if the ref_name doesn't match any header in the ref fasta file
-            #     if ref_name not in ref_to_seq.keys():
-            #         raise SystemExit('{} in sam file did not match fasta headers'.format(ref_name))
 
             if ref_name not in counts.keys():
                 counts[ref_name] = collections.defaultdict(int)
@@ -165,7 +161,7 @@ def summarize_counts(counts, ref_to_seq, sample):
     total_reads = 0
     for pos_dict in counts.values():
         total_reads +=  sum(pos_dict.values())
-    print('{}\t\t{}'.format(total_reads, sample))
+    print('{:<15}{}'.format(total_reads, sample))
 
 def generate_rows(seen_pos, ref_range=None):
     '''
@@ -290,7 +286,7 @@ def main():
 
     counts = {}
 
-    print('R2 reads\tSample')
+    print('{:<15}Sample'.format('R2 reads'))
 
     for row in bam_sample.itertuples():
 
