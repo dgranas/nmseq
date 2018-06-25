@@ -2,13 +2,11 @@
 
 Counts 5' ends of R2 reads from an Nm-seq experiment
 
-## Getting Started
-
-### Prerequisites  
+## Prerequisites  
 [samtools](http://www.htslib.org)  
 python modules: pandas, (pysam is optional)
 
-### Running on example data  
+## Running on example data  
 Click on 'Clone or Download' and select 'Download ZIP'  
 In a terminal navigate to this directory `nmseq-master` and run:  
 ```python countEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt```  
@@ -16,20 +14,20 @@ Alternatively if the python pysam module is installed run:
 ```python countEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt -p```  
 If it works this should generate 4 .counts files 
 
-### Running on new data  
+## Running on new data  
 
-#### Create a bam_samples csv file  
+### Create a bam_samples csv file  
 Each line contains [bam filename], [sample name]  
 The line order of the bam files determines the column order in the counts file    
 This can be created manually or by running createBamSample.py
 
-#### Running countEnds.py  
+### Running countEnds.py  
 python countEnds.py [experiment_name] [bam_samples file]
 -r [reference sequences fasta]
 -s [shortnames csv file]
 -p
 
-#### Required arguments
+### Required arguments
 
 * [experiment_name]  
 name used in output files, for example nm2_rRNA or nm3_chrM
@@ -37,7 +35,7 @@ name used in output files, for example nm2_rRNA or nm3_chrM
 * [bam_samples file]  
 csv file connecting bam filename to the sample name
 
-#### Optional arguments
+### Optional arguments
 
 * -r [reference sequences fasta file]  
 fasta file with reference sequences  

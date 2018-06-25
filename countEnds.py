@@ -33,6 +33,9 @@ Select for R2 reads using sam flag 131
 Select only perfectly matched alignments NM:i:0
 Count the 5' positions of the R2 reads
 Write counts out to .counts files
+
+Things to change/add:
+-o options for writing counts to an output folder
 '''
 
 import argparse
@@ -260,9 +263,10 @@ def process_input(args):
         ref_to_shortname = dict(zip(shortnames.ref, shortnames.shortname))
 
     if args.bam_sample_file:
-        # read in bamfiles and create dict of {bamfile: sample}
+        # read in bamfiles to get a dataframe
         bam_sample = pd.read_csv(args.bam_sample_file, names=['bamfile', 'samples'],
             skipinitialspace=True)
+        bam_sample = bam_sample.values.tolist()
 
     return ref_to_seq, ref_to_shortname, bam_sample
 
@@ -288,25 +292,27 @@ def main():
 
     print('{:<15}Sample'.format('R2 reads'))
 
-    for row in bam_sample.itertuples():
+    samples = []
+    for bamfile, sample in bam_sample:
+        samples.append(sample)
 
-        if args.pysam:
-            counts[row.samples] = count_ends_pysam(row.bamfile, ref_to_shortname)
-        else:
+        if args.pysam: # use faster pysam method if -p was used
+            counts[sample] = count_ends_pysam(bamfile, ref_to_shortname)
+        else: # otherwise use slower method that converts to sam file
             # convert bam file to sam file
-            samfile = bam_to_sam(row.bamfile)
+            samfile = bam_to_sam(bamfile)
 
             # do the end counting
-            counts[row.samples] = count_ends(samfile, ref_to_seq, ref_to_shortname)
+            counts[sample] = count_ends(samfile, ref_to_seq, ref_to_shortname)
 
             # remove sam file
             if os.path.exists(samfile):
                 os.remove(samfile)
 
-        summarize_counts(counts[row.samples], ref_to_seq, row.samples)
+        summarize_counts(counts[sample], ref_to_seq, sample)
 
     # write end counts to file
-    write_counts(counts, args.experiment_name, bam_sample.samples, 
+    write_counts(counts, args.experiment_name, samples, 
                  ref_to_seq, ref_to_shortname)
 
 if __name__ == '__main__':
