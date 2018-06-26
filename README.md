@@ -6,13 +6,23 @@ Counts 5' ends of R2 reads from an Nm-seq experiment
 [samtools](http://www.htslib.org)  
 python modules: pandas, (pysam is optional)
 
+## Cloning the repository on a local computer  
+In the terminal go to the directory you want to store the folder, then type:  
+```git clone https://github.com/dgranas/nmseq.git```  
+Go into new folder:  
+```cd nmseq```  
+Use git status to check if repository is up-to-date:  
+```git status```  
+If anything has been updated on github, use git pull to get the new files:  
+```git pull```  
+
 ## Running on example data  
-Click on 'Clone or Download' and select 'Download ZIP'  
-In a terminal navigate to this directory `nmseq-master` and run:  
+
+In a terminal go the nmseq directory and run:  
 ```python countEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt```  
-Alternatively if the python pysam module is installed run:  
+If it works this should generate 4 .counts files  
+Alternatively if the python pysam module is installed you can use the -p flag:  
 ```python countEnds.py nm bam_sample.txt -r mouse_ref_seqs.fa -s shortnames.txt -p```  
-If it works this should generate 4 .counts files 
 
 ## Running on new data  
 
